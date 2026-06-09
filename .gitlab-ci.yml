@@ -1,0 +1,92 @@
+# .gitlab-ci.yml — gcp-finops-agent CI/CD
+#
+# Deployment pattern: https://about.gitlab.com/blog/secure-and-fast-deployments-to-google-agent-engine-with-gitlab/
+#
+# Two jobs:
+#   1. ci      — lint + type check + unit tests (no GCP)
+#   2. deploy  — ADK deploy to Agent Engine on merge to main
+#
+# Prerequisites:
+#   - Google Cloud IAM integration enabled at Project → Settings → Integrations → Google Cloud IAM
+#   - WIF pool/provider configured (gitlab-com pool in project 1001883406514)
+#   - Service account with Agent Engine deploy permissions
+#
+# Required CI/CD variables (Project → Settings → CI/CD → Variables):
+#   PROD_PROJECT                  — GCP project ID for production deployment (Protected)
+#   AGENT_ENGINE_STAGING_BUCKET   — GCS staging bucket (e.g. gs://my-project-agent-engine-staging)
+#   GCP_BILLING_DATASET           — Standard billing export table (project.dataset.table)
+#   GCP_DETAILED_BILLING_DATASET  — Detailed billing export table (project.dataset.table)
+
+stages:
+  - test
+  - deploy
+
+variables:
+  UV_VERSION: "0.5.11"
+  PYTHON_IMAGE: "python:3.12-slim"
+  GCLOUD_IMAGE: "google/cloud-sdk:slim"
+  # Staging bucket — set AGENT_ENGINE_STAGING_BUCKET as a CI/CD variable (without gs:// prefix)
+  STORAGE_BUCKET: $AGENT_ENGINE_STAGING_BUCKET
+
+# ─── Reusable templates ────────────────────────────────────────────────────
+
+.python-setup:
+  image: $PYTHON_IMAGE
+  before_script:
+    - pip install --quiet uv==$UV_VERSION
+    - uv sync --all-extras
+
+# Removed .gcp-setup template - deploy job now uses identity: google_cloud directly
+
+# ─── 1. CI: lint + type check + unit tests ────────────────────────────────
+
+ci:
+  extends: .python-setup
+  stage: test
+  script:
+    - uv run ruff check .
+    - uv run mypy gcp_finops_agent
+    - uv run pytest -m "not eval" -v
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ─── 2. Deploy: Agent Engine deployment ────────────────────────────────────
+
+deploy:
+  image: $GCLOUD_IMAGE
+  stage: deploy
+  identity: google_cloud
+  variables:
+    GCP_PROJECT_ID: $PROD_PROJECT
+    GCP_REGION: "us-central1"
+    AGENT_NAME: "gcp-finops-agent"
+    AGENT_ENTRY: "gcp_finops_agent"
+    MAX_AGE_HOURS: "24"  # Delete Reasoning Engines older than this
+  before_script:
+    - gcloud config set core/disable_usage_reporting true
+    - gcloud config set component_manager/disable_update_check true
+    - pip install --quiet --break-system-packages uv==$UV_VERSION
+    - uv sync --all-extras
+  script:
+    - gcloud config set project $GCP_PROJECT_ID
+    # Clean up old Reasoning Engine deployments (older than MAX_AGE_HOURS)
+    - |
+      uv run python deploy/cleanup_old_engines.py \
+        --project=$GCP_PROJECT_ID \
+        --region=$GCP_REGION \
+        --max-age-hours=$MAX_AGE_HOURS
+    # Deploy new/updated Reasoning Engine
+    - echo ""
+    - echo "🚀 Deploying Reasoning Engine..."
+    - |
+      uv run adk deploy agent_engine \
+        --project=$GCP_PROJECT_ID \
+        --region=$GCP_REGION \
+        --staging_bucket=gs://$STORAGE_BUCKET \
+        --display_name="$AGENT_NAME" \
+        $AGENT_ENTRY
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
