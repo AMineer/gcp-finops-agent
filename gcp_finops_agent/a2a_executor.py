@@ -12,9 +12,12 @@ that no executor is configured. No remote call is ever attempted.
 See docs/A2A_SETUP.md for setup instructions.
 """
 
+import logging
 from typing import Any
 
 from vertexai.preview import reasoning_engines
+
+logger = logging.getLogger(__name__)
 
 from .config import get_config
 
@@ -111,10 +114,11 @@ async def delegate_action(
             "priority": priority,
         }
 
-    except Exception as e:
+    except Exception:
+        logger.exception("delegate_action failed")
         return {
             "status": "error",
-            "error": str(e),
+            "error": "Executor call failed. Check logs for details.",
             "resources_processed": 0,
             "executor_response": None,
         }
@@ -161,9 +165,10 @@ async def check_executor_capabilities(resource_types: list[str]) -> dict[str, An
             "capabilities": capabilities,
         }
 
-    except Exception as e:
+    except Exception:
+        logger.exception("check_executor_capabilities failed")
         return {
             "status": "error",
-            "error": str(e),
+            "error": "Executor call failed. Check logs for details.",
             "capabilities": None,
         }

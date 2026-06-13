@@ -1,9 +1,12 @@
 """FinOps tools for spend analysis, forecasting, recommendations, and reporting."""
 
+import logging
 from datetime import datetime, timedelta
 from . import gcp
 from . import gcs
 from .sanitize import fence_high_risk
+
+logger = logging.getLogger(__name__)
 
 
 async def query_spend(
@@ -45,8 +48,9 @@ async def query_spend(
     try:
         summary = await gcp.query_spend(start_date, end_date, project_id, service, limit)
         return summary.model_dump()
-    except Exception as e:
-        return {"error": f"Failed to query spend: {str(e)}"}
+    except Exception:
+        logger.exception("query_spend failed")
+        return {"error": "Failed to query spend. Check logs for details."}
 
 
 async def forecast_spend(month: str = "") -> dict:
@@ -68,8 +72,9 @@ async def forecast_spend(month: str = "") -> dict:
     try:
         forecast = await gcp.forecast_spend(month)
         return forecast.model_dump()
-    except Exception as e:
-        return {"error": f"Failed to forecast spend: {str(e)}"}
+    except Exception:
+        logger.exception("forecast_spend failed")
+        return {"error": "Failed to forecast spend. Check logs for details."}
 
 
 async def query_resources(
@@ -110,8 +115,9 @@ async def query_resources(
     try:
         summary = await gcp.query_resources(start_date, end_date, project_id, service, limit)
         return summary.model_dump()
-    except Exception as e:
-        return {"error": f"Failed to query resources: {str(e)}"}
+    except Exception:
+        logger.exception("query_resources failed")
+        return {"error": "Failed to query resources. Check logs for details."}
 
 
 async def lookup_resource(
@@ -151,8 +157,9 @@ async def lookup_resource(
     try:
         details = await gcp.lookup_resource_details(search_term, start_date, end_date, project_id)
         return details
-    except Exception as e:
-        return {"error": f"Failed to lookup resource: {str(e)}"}
+    except Exception:
+        logger.exception("lookup_resource failed")
+        return {"error": "Failed to lookup resource. Check logs for details."}
 
 
 async def get_recommendations(
@@ -183,8 +190,9 @@ async def get_recommendations(
             "recommendations": [r.model_dump() for r in recs]
         }
 
-    except Exception as e:
-        return {"error": f"Failed to get recommendations: {str(e)}"}
+    except Exception:
+        logger.exception("get_recommendations failed")
+        return {"error": "Failed to get recommendations. Check logs for details."}
 
 
 async def generate_report(
@@ -349,5 +357,6 @@ async def inspect_gcs_storage(bucket_name: str = "", project_id: str = "") -> di
     try:
         result = await gcs.inspect_gcs_storage(bucket_name, project_id)
         return result
-    except Exception as e:
-        return {"success": False, "error": f"Failed to inspect GCS storage: {str(e)}"}
+    except Exception:
+        logger.exception("inspect_gcs_storage failed")
+        return {"success": False, "error": "Failed to inspect GCS storage. Check logs for details."}

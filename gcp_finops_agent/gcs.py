@@ -1,7 +1,10 @@
 """GCS connector for bucket inspection and storage optimization."""
 
 import asyncio
+import logging
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 from google.api_core.exceptions import GoogleAPIError, NotFound, PermissionDenied
 from google.cloud import monitoring_v3, storage  # type: ignore[attr-defined]
@@ -69,8 +72,9 @@ def _get_bucket_object_count(bucket_name: str, project_id: str = "") -> dict:
         # No data found - bucket may be empty or very new
         return {"count": 0}
 
-    except Exception as e:
-        return {"error": f"Monitoring API error: {str(e)}"}
+    except Exception:
+        logger.exception("Cloud Monitoring object count query failed")
+        return {"error": "Monitoring API error. Check logs for details."}
 
 
 async def inspect_gcs_storage(bucket_name: str = "", project_id: str = "") -> dict:
@@ -177,16 +181,12 @@ async def inspect_gcs_storage(bucket_name: str = "", project_id: str = "") -> di
                 "success": False,
                 "error": f"Permission denied accessing bucket '{bucket_name}'. Ensure storage.buckets.get permission."
             }
-        except GoogleAPIError as e:
-            return {
-                "success": False,
-                "error": f"GCS API error: {str(e)}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Failed to inspect bucket: {str(e)}"
-            }
+        except GoogleAPIError:
+            logger.exception("GCS API error inspecting bucket")
+            return {"success": False, "error": "GCS API error. Check logs for details."}
+        except Exception:
+            logger.exception("Failed to inspect bucket")
+            return {"success": False, "error": "Failed to inspect bucket. Check logs for details."}
 
     # Run synchronous GCS call in executor
     loop = asyncio.get_event_loop()
@@ -237,16 +237,12 @@ async def list_buckets(project_id: str = "") -> dict:
                 "success": False,
                 "error": f"Permission denied listing buckets in project '{project_id}'. Ensure storage.buckets.list permission."
             }
-        except GoogleAPIError as e:
-            return {
-                "success": False,
-                "error": f"GCS API error: {str(e)}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Failed to list buckets: {str(e)}"
-            }
+        except GoogleAPIError:
+            logger.exception("GCS API error listing buckets")
+            return {"success": False, "error": "GCS API error. Check logs for details."}
+        except Exception:
+            logger.exception("Failed to list buckets")
+            return {"success": False, "error": "Failed to list buckets. Check logs for details."}
 
     # Run synchronous GCS call in executor
     loop = asyncio.get_event_loop()

@@ -2,6 +2,8 @@
 
 GCP FinOps ADK agent powered by Google ADK and deployed to Vertex AI Agent Engine.
 
+**New here?** See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for a step-by-step setup walkthrough after cloning.
+
 ## What This Repo Contains
 
 - ADK agent package in `gcp_finops_agent/`

@@ -1,0 +1,62 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:  # manual trigger from GitHub UI
+
+env:
+  UV_VERSION: "0.5.11"
+  PYTHON_VERSION: "3.12"
+  GCP_REGION: "us-central1"
+  AGENT_NAME: "gcp-finops-agent"
+  AGENT_ENTRY: "gcp_finops_agent"
+  MAX_AGE_HOURS: "24"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # required for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.PROD_PROJECT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: pip install --quiet uv==$UV_VERSION
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Clean up old Reasoning Engines
+        run: |
+          uv run python deploy/cleanup_old_engines.py \
+            --project=${{ secrets.PROD_PROJECT }} \
+            --region=$GCP_REGION \
+            --max-age-hours=$MAX_AGE_HOURS
+
+      - name: Deploy to Agent Engine
+        run: |
+          uv run adk deploy agent_engine \
+            --project=${{ secrets.PROD_PROJECT }} \
+            --region=$GCP_REGION \
+            --staging_bucket=gs://${{ secrets.AGENT_ENGINE_STAGING_BUCKET }} \
+            --display_name="$AGENT_NAME" \
+            $AGENT_ENTRY
