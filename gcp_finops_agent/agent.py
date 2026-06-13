@@ -45,5 +45,5 @@ root_agent = Agent(
     model=config.gemini_model,
     description="GCP FinOps agent for spend analysis, cost optimization, and savings recommendations",
     instruction=build_instruction,  # Callable - evaluates date per-request
-    tools=_tools,
+    tools=_tools,  # type: ignore[arg-type]
 )

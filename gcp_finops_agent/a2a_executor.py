@@ -104,7 +104,7 @@ async def delegate_action(
             f"4. If an action fails, continue with remaining resources\n"
         )
 
-        response = await executor.query(input=request_text)
+        response = await executor.query(input=request_text)  # type: ignore[attr-defined]
         executor_response = response.get("output", str(response)) if isinstance(response, dict) else str(response)
 
         return {
@@ -156,7 +156,7 @@ async def check_executor_capabilities(resource_types: list[str]) -> dict[str, An
             f"and what safety checks do you perform? Be concise."
         )
 
-        response = await executor.query(input=query)
+        response = await executor.query(input=query)  # type: ignore[attr-defined]
         capabilities = response.get("output", str(response)) if isinstance(response, dict) else str(response)
 
         return {
