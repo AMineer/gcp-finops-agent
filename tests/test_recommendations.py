@@ -23,7 +23,7 @@ async def test_get_recommendations_fan_out_coverage(monkeypatch):
     mock_config = MagicMock()
     mock_config.gcp_project_scope = test_projects
 
-    monkeypatch.setattr("foreclosure.gcp.get_config", lambda: mock_config)
+    monkeypatch.setattr("gcp_finops_agent.gcp.get_config", lambda: mock_config)
 
     # Mock RecommenderAsyncClient
     mock_client = AsyncMock()
@@ -51,7 +51,7 @@ async def test_get_recommendations_fan_out_coverage(monkeypatch):
 
     mock_client.list_recommendations = mock_list_recommendations
 
-    with patch("foreclosure.gcp.recommender_v1.RecommenderAsyncClient", return_value=mock_client):
+    with patch("gcp_finops_agent.gcp.recommender_v1.RecommenderAsyncClient", return_value=mock_client):
         # Call get_recommendations
         await get_recommendations()
 
@@ -84,7 +84,7 @@ async def test_get_recommendations_semaphore_limits_concurrency(monkeypatch):
     mock_config = MagicMock()
     mock_config.gcp_project_scope = test_projects
 
-    monkeypatch.setattr("foreclosure.gcp.get_config", lambda: mock_config)
+    monkeypatch.setattr("gcp_finops_agent.gcp.get_config", lambda: mock_config)
 
     # Track max concurrent requests
     concurrent_count = 0
@@ -113,7 +113,7 @@ async def test_get_recommendations_semaphore_limits_concurrency(monkeypatch):
 
     mock_client.list_recommendations = mock_list_recommendations
 
-    with patch("foreclosure.gcp.recommender_v1.RecommenderAsyncClient", return_value=mock_client):
+    with patch("gcp_finops_agent.gcp.recommender_v1.RecommenderAsyncClient", return_value=mock_client):
         await get_recommendations()
 
     # With 3 projects × 3 locations × 11 recommenders = 99 total requests
@@ -134,7 +134,7 @@ async def test_get_recommendations_filters_by_min_savings(monkeypatch):
     mock_config = MagicMock()
     mock_config.gcp_project_scope = ["test-project"]
 
-    monkeypatch.setattr("foreclosure.gcp.get_config", lambda: mock_config)
+    monkeypatch.setattr("gcp_finops_agent.gcp.get_config", lambda: mock_config)
 
     # Mock client that returns 3 recommendations with different savings
     # Only return recommendations for one specific (location, recommender) combo to avoid duplicates
@@ -182,7 +182,7 @@ async def test_get_recommendations_filters_by_min_savings(monkeypatch):
 
     mock_client.list_recommendations = mock_list_recommendations
 
-    with patch("foreclosure.gcp.recommender_v1.RecommenderAsyncClient", return_value=mock_client):
+    with patch("gcp_finops_agent.gcp.recommender_v1.RecommenderAsyncClient", return_value=mock_client):
         # Query with min_savings=50 should filter out the $10 rec
         result = await get_recommendations(min_savings=50.0)
 

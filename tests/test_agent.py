@@ -8,7 +8,7 @@ from gcp_finops_agent.prompts import build_instruction
 def test_agent_imports():
     """Test that the agent can be imported successfully."""
     assert root_agent is not None
-    assert root_agent.name == "gcp-finops-agent"
+    assert root_agent.name == "gcp_finops_agent"
     assert callable(root_agent.instruction)
 
 
