@@ -4,8 +4,6 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
-logger = logging.getLogger(__name__)
-
 from google.api_core.exceptions import GoogleAPIError, NotFound, PermissionDenied
 from google.cloud import monitoring_v3, storage  # type: ignore[attr-defined]
 from .sanitize import (
@@ -14,6 +12,8 @@ from .sanitize import (
     MAX_LEN_BUCKET_NAME,
     MAX_LEN_DEFAULT,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _get_bucket_object_count(bucket_name: str, project_id: str = "") -> dict:

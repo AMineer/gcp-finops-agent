@@ -17,9 +17,9 @@ from typing import Any
 
 from vertexai.preview import reasoning_engines
 
-logger = logging.getLogger(__name__)
-
 from .config import get_config
+
+logger = logging.getLogger(__name__)
 
 _NOT_CONFIGURED: dict[str, Any] = {
     "status": "disabled",
