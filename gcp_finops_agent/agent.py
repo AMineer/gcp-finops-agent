@@ -41,7 +41,7 @@ if config.a2a_executor_enabled:
     _tools.extend([delegate_action, check_executor_capabilities])
 
 root_agent = Agent(
-    name="gcp-finops-agent",
+    name="gcp_finops_agent",
     model=config.gemini_model,
     description="GCP FinOps agent for spend analysis, cost optimization, and savings recommendations",
     instruction=build_instruction,  # Callable - evaluates date per-request
